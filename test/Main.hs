@@ -2,8 +2,8 @@
 
 module Main where
 
-import BT.Tree as BT
-import AVL.Tree as AVL
+import Tree.Bst as Bst
+import Tree.Avl as Avl
 import qualified Data.Set as Set
 import System.Random
 import System.Random.Stateful
@@ -21,8 +21,8 @@ smallTest = pure ()
 
 
 largeTest = do
-  largeTestTree "BT" (emptyTree :: BT.Tree Int)
-  largeTestTree "AVL" (emptyTree :: AVL.Tree Int)
+  largeTestTree "BT" (emptyTree :: Bst.Tree Int)
+  largeTestTree "AVL" (emptyTree :: Avl.Tree Int)
 
 
 largeTestTree ::( SearchTree t, Foldable t) => String -> t Int -> Spec

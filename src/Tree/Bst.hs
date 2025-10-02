@@ -9,7 +9,7 @@
 {-# LANGUAGE Strict#-}
 
 
-module BT.Tree (Tree) where
+module Tree.Bst (Tree) where
 import Prelude hiding (lookup, delete)
 import Data.List hiding (insert, lookup, delete)
 import Data.Foldable (toList)
@@ -110,7 +110,6 @@ locate elt = untilNothing (curLeftRight >=> descend) where
       EQ -> Nothing
       GT -> Just r
       LT -> Just l
-
 
 curLeftRight (Node val left right, cxt) = Just (val, (left, CL val cxt right), (right, CR val left cxt))
 curLeftRight _ = Nothing

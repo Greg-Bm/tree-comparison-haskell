@@ -12,7 +12,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies#-}
 
-module AVL.Tree (Tree, insert, delete, lookup) where
+module Tree.Avl (Tree, insert, delete, lookup) where
 import Prelude hiding (lookup, insert)
 import Prelude as P hiding (lookup)
 import Data.Nat as N

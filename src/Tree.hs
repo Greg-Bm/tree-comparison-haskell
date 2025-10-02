@@ -12,9 +12,10 @@ class SearchTree t where
   -- | delete the value. lookup k (delete k v t) == Nothing
   delete :: Ord k => k -> t k -> t k
 
-
 fromList :: SearchTree t => Ord a => [a] -> t a
 fromList = foldl' (flip insert) emptyTree
 
 member :: (SearchTree t, Ord a) => a -> t a -> Bool
 member v tree = isJust (Tree.lookup v tree)
+
+
