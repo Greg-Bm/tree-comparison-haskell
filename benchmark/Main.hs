@@ -1,34 +1,42 @@
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE TypeApplications #-}
+
 module Main where
 
+import Control.Monad
+import Criterion.Main
+import Data.Proxy
+import Data.Set as Set
 import System.Random
 import System.Random.Stateful
-import Criterion.Main
-import Data.Set as Set
-import Tree as Tree
+import Tree
 import Tree.Avl as Avl
 import Tree.Bst as Bst
-import Control.Monad
-
+import Tree.Workloads
 
 main :: IO ()
-main = defaultMain [
-  bgroup "build" [ bench "set e3" $ nf Set.fromList liste3
-                 , bench "avl e3" $ nf (Tree.fromList :: [Int] -> Avl.Tree Int) liste3
-                 , bench "bst e3" $ nf (Tree.fromList :: [Int] -> BST.Tree Int) liste3
-                 , bench "set e4" $ nf Set.fromList liste4
-                 , bench "avl e4" $ nf (Tree.fromList :: [Int] -> Avl.Tree Int) liste4
-                 , bench "bst e4" $ nf (Tree.fromList :: [Int] -> BST.Tree Int) liste4
-                 , bench "set e5" $ nf Set.fromList liste5
-                 , bench "avl e5" $ nf (Tree.fromList :: [Int] -> Avl.Tree Int) liste5
-                 , bench "bst e5" $ nf (Tree.fromList :: [Int] -> BST.Tree Int) liste5
-                 ]
-  ]
+main =
+  defaultMain
+    [ mixedQueriesTest 100000 100000 1
+    , mixedQueriesTest 100000 1000 1
+    ]
 
-liste3 = genRandomList 1000 1
-liste4 = genRandomList 10000 1
-liste5 = genRandomList 100000 1
+mixedQueriesTest length range seed =
+  env (pure (mixedQueriesInput length range seed)) $ \list ->
+    bgroup ("length " <> show length <> ", range " <> show range) $
+      [ bench "set" $ nf (mixedQueries @Set.Set Proxy) list,
+        bench "avl" $ nf (mixedQueries @Avl.Tree Proxy) list,
+        bench "bst" $ nf (mixedQueries @Bst.Tree Proxy) list
+      ]
 
-genRandomList :: Int -> Int -> [Int]
-genRandomList n seed  = runStateGen_ (mkStdGen seed) (replicateM n . uniformRM (1, billion))
+mixedQueriesInput length range seed = do
+  let nums = genRandomList length range seed
+      actions = numToAction <$> genRandomList length 3 seed
+      numToAction = \case
+        1 -> Insert
+        2 -> Delete
+        3 -> Member
+  zip actions nums
 
-billion = 1000000000
+genRandomList :: Int -> Int -> Int -> [Int]
+genRandomList length range seed = runStateGen_ (mkStdGen seed) (replicateM length . uniformRM (1, range))
