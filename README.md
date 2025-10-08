@@ -1,12 +1,15 @@
 # About
 
-The purpose of this project is to compare a few implementations of tree data structures, including an unbalanced binary search tree and several types of balanced binary search trees. Additionally, a comparison to the tree data structure from `Data.Set` is provided.
+The purpose of this project is to compare a few implementations of tree data structures, including an unbalanced binary search tree and several types of balanced binary search trees.
+
+Additionally, a comparison to the tree data structure from `Data.Set` is provided. However, `Data.Set` is different in terms of functionality and implementation, so a comparison between data structures implemented in this project and `Data.Set` should not be used as a comparison of their respective underlyinb algorithms.
 
 # Status
 
 So far, the following types of tree are implemented:
 * BST
 * AVL Tree
+* Red-Black Tree (incomplete)
 
 The following operations are supported for trees:
 * Insertion
@@ -18,6 +21,8 @@ The following operations are supported for trees:
 Tree operations are implemented via zippers.
 
 In general, the implementation of trees should seek to make invalid states in the code unrepresentable (parse, don't validate). In particular, balance-based invariants of trees, such as the balance invariant for AVL trees, are enforced at the type level.
+
+Tree nodes only store the value at the node, the left and right children, and data necessary for the implementation of balancing at runtime (e.g. color for Red-Black trees and depth for AVL trees). In particular, they do NOT store size and depth unless those properties are necessary for balancing.
 
 # Usage
 
