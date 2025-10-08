@@ -12,7 +12,6 @@ import Data.Functor ()
 import Data.List hiding (delete, insert, lookup)
 import GHC.Generics
 import GHC.IO.Exception
-import Zipper qualified as Z
 import qualified Tree
 import Prelude hiding (delete, lookup)
 

@@ -12,6 +12,7 @@ import System.Random.Stateful
 import Tree
 import Tree.Avl as Avl
 import Tree.Bst as Bst
+import Tree.Rbt as Rbt
 import Tree.Workloads
 
 main :: IO ()
@@ -27,7 +28,8 @@ mixedQueriesTests length range trials =
   env (pure (mixedQueriesTestInput length range trials)) $ \list ->
     bgroup ("length " <> show length <> ", range " <> show range <> ", trials " <> show trials) [ bench "set" $ nf (mixedQueriesTest @Set.Set Proxy) list,
         bench "avl" $ nf (mixedQueriesTest @Avl.Tree Proxy) list,
-        bench "bst" $ nf (mixedQueriesTest @Bst.Tree Proxy) list
+        bench "bst" $ nf (mixedQueriesTest @Bst.Tree Proxy) list,
+        bench "rbt" $ nf (mixedQueriesTest @Rbt.Tree Proxy) list
       ]
 
 mixedQueriesTest :: (SearchTree t, Ord a) => Proxy (t a) -> [[(Action, a)]] -> [([Bool], t a)]

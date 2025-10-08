@@ -12,6 +12,8 @@ import Test.Hspec
 import Tree
 import Tree.Avl as Avl
 import Tree.Bst as Bst
+import Tree.Rbt as Rbt
+
 
 main :: IO ()
 main = hspec $ do
@@ -23,7 +25,7 @@ smallTest = pure ()
 largeTest = do
   largeTestTree "BT" (emptyTree :: Bst.Tree Int)
   largeTestTree "AVL" (emptyTree :: Avl.Tree Int)
-
+  largeTestTree "RBT" (emptyTree :: Rbt.Tree Int)
 largeTestTree :: (SearchTree t, Foldable t) => String -> t Int -> Spec
 largeTestTree name init = do
   let largenum = 10000

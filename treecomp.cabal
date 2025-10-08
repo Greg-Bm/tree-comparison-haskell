@@ -68,6 +68,7 @@ library
                        , random >= 1.3.1
     exposed-modules:    Tree.Bst
                        , Tree.Avl
+                       , Tree.Rbt
                        , Tree.Workloads
                        , Tree.Zipper
                        , Tree
