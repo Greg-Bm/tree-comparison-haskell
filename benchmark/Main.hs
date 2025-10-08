@@ -17,18 +17,26 @@ import Tree.Workloads
 main :: IO ()
 main =
   defaultMain
-    [ mixedQueriesTest 100000 100000 1
-    , mixedQueriesTest 100000 1000 1
+    [ mixedQueriesTests 1000 1000 100,
+      mixedQueriesTests 1000 20 100,
+      mixedQueriesTests 10000 10000 100
     ]
 
-mixedQueriesTest length range seed =
-  env (pure (mixedQueriesInput length range seed)) $ \list ->
-    bgroup ("length " <> show length <> ", range " <> show range) $
-      [ bench "set" $ nf (mixedQueries @Set.Set Proxy) list,
-        bench "avl" $ nf (mixedQueries @Avl.Tree Proxy) list,
-        bench "bst" $ nf (mixedQueries @Bst.Tree Proxy) list
+mixedQueriesTests :: Int -> Int -> Int -> Benchmark
+mixedQueriesTests length range trials =
+  env (pure (mixedQueriesTestInput length range trials)) $ \list ->
+    bgroup ("length " <> show length <> ", range " <> show range <> ", trials " <> show trials) [ bench "set" $ nf (mixedQueriesTest @Set.Set Proxy) list,
+        bench "avl" $ nf (mixedQueriesTest @Avl.Tree Proxy) list,
+        bench "bst" $ nf (mixedQueriesTest @Bst.Tree Proxy) list
       ]
 
+mixedQueriesTest :: (SearchTree t, Ord a) => Proxy (t a) -> [[(Action, a)]] -> [([Bool], t a)]
+mixedQueriesTest proxy = fmap (mixedQueries proxy)
+
+mixedQueriesTestInput :: Int -> Int -> Int -> [[(Action, Int)]]
+mixedQueriesTestInput length range n = mixedQueriesInput length range <$> [1 .. n]
+
+mixedQueriesInput :: Int -> Int -> Int -> [(Action, Int)]
 mixedQueriesInput length range seed = do
   let nums = genRandomList length range seed
       actions = numToAction <$> genRandomList length 3 seed

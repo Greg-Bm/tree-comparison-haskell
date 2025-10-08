@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -18,6 +19,7 @@ import Data.List (foldl')
 import Data.Nat as N
 import Data.Void (Void)
 import qualified Tree
+import Tree.Zipper as Zipper
 import Prelude hiding (insert, lookup)
 import Prelude as P hiding (lookup)
 
@@ -49,7 +51,6 @@ data T (level :: Nat) (key :: Type) where
   Node :: Balance nh nl nr -> key -> T nl key -> T nr key -> T nh key
 
 foldrInorder f i t = foldrInorder' f t i
-
 foldrInorder' :: (a -> b -> b) -> T n a -> b -> b
 foldrInorder' f Nil = id
 foldrInorder' f (Node _ v l r) = foldrInorder' f l . f v . foldrInorder' f r
@@ -67,34 +68,21 @@ data Zipper a = forall n. Zipper (T n a) (Context n a)
 
 emptyTree = Tree Nil
 
-up :: Zipper a -> Maybe (Zipper a)
-up (Zipper t (CL bal elt cxt right)) = Just $ Zipper (Node bal elt t right) cxt
-up (Zipper t (CR bal elt left cxt)) = Just $ Zipper (Node bal elt left t) cxt
-up (Zipper _ Root) = Nothing
+instance BTZipper Zipper where
+  up (Zipper t (CL bal elt cxt right)) = Just $ Zipper (Node bal elt t right) cxt
+  up (Zipper t (CR bal elt left cxt)) = Just $ Zipper (Node bal elt left t) cxt
+  up (Zipper _ Root) = Nothing
+
+  valLeftRight (Zipper Nil _) = Nothing
+  valLeftRight (Zipper (Node bal elt l r) cxt) =
+    Just (elt, Zipper l (CL bal elt cxt r), Zipper r (CR bal elt l cxt))
 
 fromZipper = (\(Zipper t _) -> Tree t) . untilNothing up
 
 toZipper (Tree t) = Zipper t Root
 
-valLeftRight (Zipper Nil _) = Nothing
-valLeftRight (Zipper (Node bal elt l r) cxt) =
-  Just (elt, Zipper l (CL bal elt cxt r), Zipper r (CR bal elt l cxt))
-
-locate :: (Ord a) => a -> Zipper a -> Zipper a
-locate elt zipper = maybe zipper look (valLeftRight zipper)
-  where
-    look (val, l, r) = case compare elt val of
-      EQ -> zipper
-      LT -> locate elt l
-      GT -> locate elt r
-
-lookup elt = res . locate elt . toZipper
-  where
-    res (Zipper Nil _) = Nothing
-    res (Zipper (Node bal key l r) _) = Just key
-
+lookup elt = zlookup elt . toZipper
 insert elt = fromZipper . insert' elt . toZipper
-
 delete elt = fromZipper . delete' elt . toZipper
 
 insert' elt zip = case locate elt zip of
@@ -114,13 +102,6 @@ delete' elt zip = case locate elt zip of
       Zipper Nil cxt -> error "this should be impossible."
       Zipper (Node BE v rl rr) cxt -> deleteAndFix rr $ replaceUp cv v cxt
       Zipper (Node BR v rl rr) cxt -> deleteAndFix rr $ replaceUp cv v cxt
-
-findLeastIn :: Zipper a -> Zipper a
-findLeastIn = untilNothing (valLeftRight >=> descend)
-  where
-    descend (_, l, _) = case l of
-      (Zipper Nil _) -> Nothing
-      other -> Just l
 
 deleteAndFix :: T n a -> Context (S n) a -> Zipper a
 deleteAndFix node Root = Zipper node Root
@@ -180,7 +161,3 @@ balanceL v (Node lb lv ll lr) r = case lb of
       BL -> (Node BE lv ll lrl, Node BR v lrr r)
       BE -> (Node BE lv ll lrl, Node BE v lrr r)
       BR -> (Node BL lv ll lrl, Node BE v lrr r)
-
--- iterate until Nothing is reached, return second to last value.
-untilNothing :: (a -> Maybe a) -> a -> a
-untilNothing f = go where go elt = maybe elt go (f elt)
