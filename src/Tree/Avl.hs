@@ -8,7 +8,7 @@
 {-# LANGUAGE Strict #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Tree.Avl (Tree, insert, delete, lookup) where
+module Tree.Avl (Tree) where
 
 import Control.DeepSeq
 import Control.Exception
@@ -35,9 +35,11 @@ instance Foldable Tree where
 
 instance Tree.SearchTree Tree where
   emptyTree = emptyTree
-  insert = insert
-  delete = delete
-  lookup = lookup
+  insert elt tree = fromZipper $ case locate elt (toZipper tree) of
+    Zipper Nil cxt -> insertAndFix (Node BE elt Nil Nil) cxt
+    Zipper (Node bal key l r) cxt -> Zipper (Node bal elt l r) cxt
+  delete elt = fromZipper . deleteAt . locate elt . toZipper
+  lookup elt = zlookup elt . toZipper
 
 data Balance (nh :: Nat) nl ng :: Type where
   BE :: Balance (S n) n n
@@ -81,16 +83,8 @@ fromZipper = (\(Zipper t _) -> Tree t) . untilNothing up
 
 toZipper (Tree t) = Zipper t Root
 
-lookup elt = zlookup elt . toZipper
-insert elt = fromZipper . insert' elt . toZipper
-delete elt = fromZipper . delete' elt . toZipper
-
-insert' elt zip = case locate elt zip of
-  Zipper Nil cxt -> insertAndFix (Node BE elt Nil Nil) cxt
-  Zipper (Node bal key l r) cxt -> Zipper (Node bal elt l r) cxt
-
-delete' :: (Ord a) => a -> Zipper a -> Zipper a
-delete' elt zip = case locate elt zip of
+deleteAt :: (Ord a) => Zipper a -> Zipper a
+deleteAt zip = case zip of
   Zipper Nil cxt -> zip
   Zipper (Node BE _ Nil Nil) cxt -> deleteAndFix Nil cxt
   Zipper (Node BL _ l@Node {} Nil) cxt -> deleteAndFix l cxt

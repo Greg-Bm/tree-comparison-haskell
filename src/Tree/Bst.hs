@@ -12,6 +12,7 @@ import Data.Functor ()
 import Data.List hiding (delete, insert, lookup)
 import GHC.Generics
 import GHC.IO.Exception
+import Tree.Zipper
 import qualified Tree
 import Prelude hiding (delete, lookup)
 
@@ -24,7 +25,7 @@ instance Tree.SearchTree Tree where
   emptyTree = Nil
   insert = insert
   delete = delete
-  lookup = lookup
+  lookup elt = zlookup elt . toZipper
 
 instance Foldable Tree where
   foldr = foldrInorder
@@ -32,7 +33,17 @@ instance Foldable Tree where
 data Cxt a = Root | CL a (Cxt a) (Tree a) | CR a (Tree a) (Cxt a)
   deriving (Eq, Ord, Show, Generic, NFData)
 
-type Loc a = (Tree a, Cxt a)
+data Zipper a = Zipper (Tree a) (Cxt a)
+
+instance BTZipper Zipper where
+  valLeftRight (Zipper n cxt) = case n of
+    Nil -> Nothing
+    Node val left right -> Just (val, Zipper left (CL val cxt right), Zipper right (CR val left cxt))
+
+  up (Zipper n c) = case c of
+    Root -> Nothing
+    CL a h t -> Just $ Zipper (Node a n t) h
+    CR a t h -> Just $ Zipper (Node a t n) h
 
 foldrPreorder :: (t -> c -> c) -> c -> Tree t -> c
 foldrPreorder f = flip go
@@ -50,19 +61,14 @@ foldrInorder f = flip go
     go Nil = id
     go (Node e l r) = go l . f e . go r
 
-lookup elt tree = check . fst $ locate elt (toLoc tree)
-  where
-    check Nil = Nothing
-    check (Node e _ _) = Just e
-
 insert :: (Ord a) => a -> Tree a -> Tree a
-insert elt tree = fromLoc $ mapFst ins $ locate elt (toLoc tree)
+insert elt tree = fromZipper $ mapFst ins $ locate elt (toZipper tree)
   where
     ins Nil = Node elt Nil Nil
     ins (Node _ l r) = Node elt l r
 
 delete :: (Ord a) => a -> Tree a -> Tree a
-delete elt tree = fromLoc $ deleteCur $ locate elt (toLoc tree)
+delete elt tree = fromZipper $ deleteCur $ locate elt (toZipper tree)
 
 -- NOTE precondition: all vals in right are greater than all vals in left
 mergeLR :: Tree a -> Tree a -> Tree a
@@ -70,44 +76,21 @@ mergeLR Nil tree = tree
 mergeLR tree Nil = tree
 mergeLR left right@(Node re rl rr) = Node elt left right'
   where
-    loc@(tree, cxt) = locateLeast (toLoc right)
+    loc@(Zipper tree cxt) = findLeastIn (toZipper right)
     elt = case tree of
       Nil -> re
       Node lre _ _ -> lre
-    right' = fromLoc $ deleteCur loc
+    right' = fromZipper $ deleteCur loc
 
 deleteCur = mapFst del
   where
     del Nil = Nil
     del (Node elt l r) = mergeLR l r
 
-locateGreatest :: (Tree a, Cxt a) -> (Tree a, Cxt a)
-locateGreatest =
-  untilNothing (curLeftRight >=> descend)
-  where
-    descend (elt, l, r) = case fst r of
-      Nil -> Nothing
-      right -> Just r
 
-locateLeast =
-  untilNothing (curLeftRight >=> descend)
-  where
-    descend (elt, l, r) = case fst l of
-      Nil -> Nothing
-      left -> Just l
+fromZipper = (\(Zipper t c) -> t) . zroot
+toZipper f = Zipper f Root
 
-toLoc tree = (tree, Root)
-
-fromLoc :: (Tree a, Cxt a) -> Tree a
-fromLoc = fst . untilNothing up
-
-locate :: (Ord p) => p -> (Tree p, Cxt p) -> (Tree p, Cxt p)
-locate elt = untilNothing (curLeftRight >=> descend)
-  where
-    descend (val, l, r) = case compare elt val of
-      EQ -> Nothing
-      GT -> Just r
-      LT -> Just l
 
 curLeftRight (Node val left right, cxt) = Just (val, (left, CL val cxt right), (right, CR val left cxt))
 curLeftRight _ = Nothing
@@ -117,13 +100,10 @@ up (node, CL a cxt right) = Just (Node a node right, cxt)
 up (node, CR a left cxt) = Just (Node a left node, cxt)
 up _ = Nothing
 
--- iterate until Nothing is reached, return second to last value.
-untilNothing :: (a -> Maybe a) -> a -> a
-untilNothing f = go where go elt = maybe elt go (f elt)
 
 fromList :: (Ord a) => [a] -> Tree a
 fromList = foldl' (flip insert) Nil
 
-mapFst f (a, b) = (f a, b)
+mapFst f (Zipper t c) = Zipper (f t) c
 
 toList = foldrInorder (:) []
